@@ -33,3 +33,15 @@ All accounts use the password `Demo@1234`.
 1. **Accounts, roles & verification**: signup/login (bcrypt + JWT in an httpOnly cookie), roles
    (student / owner / manager / admin), profile editing, global verification flags set by
    owners/managers, per-resource eligibility grants, role assignment by admins.
+2. **Resource listings**: owners (and admins) create and edit listings with category, location,
+   photos (Cloudinary), access conditions (account types, departments, ID verification, safety
+   training, per-equipment approval, supervision, deposit), usage rules (max duration, max
+   concurrent bookings, return condition), weekly availability slots, blackout dates and a status
+   (active / under maintenance / retired). Everyone signed in can browse listings and see whether
+   they meet a resource's access conditions. Seeded with 7 demo resources.
+
+## Photo uploads (optional)
+
+Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
+photo uploads on listings. Without them, uploads return a clear "not configured" error and
+everything else still works.

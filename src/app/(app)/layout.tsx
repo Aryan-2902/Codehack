@@ -9,13 +9,16 @@ export default async function AppLayout({ children }: { children: React.ReactNod
 
   return (
     <div className="min-h-screen">
-      <header className="border-b border-slate-200 bg-white">
+      <header className="sticky top-0 z-10 animate-fade-in border-b border-slate-200 bg-white/80 backdrop-blur">
         <nav className="mx-auto flex max-w-5xl items-center gap-6 px-4 py-3 text-sm">
           <Link href="/dashboard" className="text-base font-bold text-indigo-700">
             Campus Lab Share
           </Link>
           <Link href="/dashboard" className="text-slate-600 hover:text-slate-900">
             Dashboard
+          </Link>
+          <Link href="/resources" className="text-slate-600 hover:text-slate-900">
+            Resources
           </Link>
           {canManagePeople && (
             <Link href="/people" className="text-slate-600 hover:text-slate-900">

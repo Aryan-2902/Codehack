@@ -47,3 +47,52 @@ export const eligibilitySchema = z.object({
   resourceId: z.string().min(1),
   note: z.string().trim().max(200).optional(),
 });
+
+export const CATEGORIES = ["WORKSHOP_TOOL", "LAB_INSTRUMENT", "BOOKABLE_SPACE"] as const;
+export const RESOURCE_STATUSES = ["ACTIVE", "MAINTENANCE", "RETIRED"] as const;
+
+const slotSchema = z
+  .object({
+    dayOfWeek: z.number().int().min(0).max(6),
+    startMinute: z.number().int().min(0).max(1439),
+    endMinute: z.number().int().min(1).max(1440),
+  })
+  .refine((s) => s.endMinute > s.startMinute, "Slot must end after it starts");
+
+const blackoutSchema = z.object({
+  date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD"),
+  reason: z.string().trim().max(200).optional(),
+});
+
+export const resourceSchema = z
+  .object({
+    name: z.string().trim().min(2, "Name is too short").max(100),
+    category: z.enum(CATEGORIES),
+    description: z.string().trim().min(10, "Describe the resource in a few words").max(2000),
+    location: z.string().trim().min(2, "Enter a location").max(120),
+    photos: z.array(z.url()).max(6).default([]),
+    conditionAtListing: z.string().trim().max(500).optional(),
+    status: z.enum(RESOURCE_STATUSES).default("ACTIVE"),
+
+    allowedRoles: z.array(z.enum(["STUDENT", "OWNER", "MANAGER", "ADMIN"])).default([]),
+    allowedDepartments: z.array(z.string().trim().min(1)).default([]),
+    requiresVerified: z.boolean().default(false),
+    requiresSafetyTraining: z.boolean().default(false),
+    requiresEligibilityGrant: z.boolean().default(false),
+    requiresSupervision: z.boolean().default(false),
+    depositRequired: z.boolean().default(false),
+    depositAmount: z.number().int().min(1).max(1_000_000).optional(),
+
+    maxBookingHours: z.number().int().min(1).max(168).default(4),
+    maxConcurrentBookings: z.number().int().min(1).max(50).default(1),
+    expectedReturnCondition: z.string().trim().min(2).max(300),
+
+    slots: z.array(slotSchema).max(50).default([]),
+    blackouts: z.array(blackoutSchema).max(100).default([]),
+  })
+  .refine((r) => !r.depositRequired || r.depositAmount, {
+    path: ["depositAmount"],
+    message: "Enter the deposit amount",
+  });
+
+export type ResourceInput = z.infer<typeof resourceSchema>;

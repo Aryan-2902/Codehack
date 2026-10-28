@@ -71,10 +71,10 @@ model User {
   updatedAt     DateTime @updatedAt
 
   resources         Resource[]
-  bookings          BookingRequest[]      @relation("Requester")
-  managedBookings   BookingRequest[]      @relation("Manager")
-  eligibilityGrants EligibilityGrant[]    @relation("GrantedTo")
-  grantsGiven       EligibilityGrant[]    @relation("GrantedBy")
+  bookings          BookingRequest[]   @relation("Requester")
+  managedBookings   BookingRequest[]   @relation("Manager")
+  eligibilityGrants EligibilityGrant[] @relation("GrantedTo")
+  grantsGiven       EligibilityGrant[] @relation("GrantedBy")
   conditionReports  ConditionReport[]
   incidents         Incident[]
   auditLogs         AuditLog[]
@@ -106,33 +106,75 @@ model Resource {
   description        String
   location           String
   photos             String[]
-  eligibilityRules   Json?
-  availabilityWindows Json?
   conditionAtListing String?
   status             ResourceStatus   @default(ACTIVE)
-  createdAt          DateTime         @default(now())
-  updatedAt          DateTime         @updatedAt
+
+  // Access conditions: who can book. Empty arrays mean "no restriction".
+  allowedRoles             Role[]
+  allowedDepartments       String[]
+  requiresVerified         Boolean  @default(false)
+  requiresSafetyTraining   Boolean  @default(false)
+  requiresEligibilityGrant Boolean  @default(false)
+  requiresSupervision      Boolean  @default(false)
+  depositRequired          Boolean  @default(false)
+  depositAmount            Int?
+
+  // Usage rules
+  maxBookingHours         Int    @default(4)
+  maxConcurrentBookings   Int    @default(1)
+  expectedReturnCondition String @default("Clean and in the same condition as received")
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
   owner             User               @relation(fields: [ownerId], references: [id])
+  slots             AvailabilitySlot[]
+  blackouts         BlackoutDate[]
   bookings          BookingRequest[]
   waitlistEntries   WaitlistEntry[]
   eligibilityGrants EligibilityGrant[]
+
+  @@index([category, status])
+}
+
+// Weekly recurring open slot. dayOfWeek: 0 = Sunday ... 6 = Saturday; times are minutes from midnight.
+model AvailabilitySlot {
+  id          String @id @default(cuid())
+  resourceId  String
+  dayOfWeek   Int
+  startMinute Int
+  endMinute   Int
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@index([resourceId])
+}
+
+model BlackoutDate {
+  id         String   @id @default(cuid())
+  resourceId String
+  date       DateTime @db.Date
+  reason     String?
+
+  resource Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+
+  @@unique([resourceId, date])
 }
 
 model BookingRequest {
-  id              String        @id @default(cuid())
-  resourceId      String
-  requesterId     String
-  managerId       String?
-  purpose         String
-  startsAt        DateTime
-  endsAt          DateTime
-  status          BookingStatus @default(DRAFT)
-  decisionReason  String?
-  checkedInAt     DateTime?
-  checkedOutAt    DateTime?
-  createdAt       DateTime      @default(now())
-  updatedAt       DateTime      @updatedAt
+  id             String        @id @default(cuid())
+  resourceId     String
+  requesterId    String
+  managerId      String?
+  purpose        String
+  startsAt       DateTime
+  endsAt         DateTime
+  status         BookingStatus @default(DRAFT)
+  decisionReason String?
+  checkedInAt    DateTime?
+  checkedOutAt   DateTime?
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
 
   resource         Resource          @relation(fields: [resourceId], references: [id])
   requester        User              @relation("Requester", fields: [requesterId], references: [id])
@@ -183,14 +225,14 @@ model AuditLog {
 }
 
 model WaitlistEntry {
-  id              String    @id @default(cuid())
-  resourceId      String
-  userId          String
-  startsAt        DateTime
-  endsAt          DateTime
-  position        Int
-  notifiedAt      DateTime?
-  createdAt       DateTime  @default(now())
+  id         String    @id @default(cuid())
+  resourceId String
+  userId     String
+  startsAt   DateTime
+  endsAt     DateTime
+  position   Int
+  notifiedAt DateTime?
+  createdAt  DateTime  @default(now())
 
   resource Resource @relation(fields: [resourceId], references: [id])
   user     User     @relation(fields: [userId], references: [id])

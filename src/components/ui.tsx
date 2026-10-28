@@ -1,7 +1,7 @@
 import type { ComponentProps, ReactNode } from "react";
 
 const inputClass =
-  "w-full rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-100";
+  "w-full transition rounded-md border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 shadow-sm outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 disabled:bg-slate-100";
 
 export function Field({
   label,
@@ -38,7 +38,7 @@ export function Button({
   return (
     <button
       {...props}
-      className={`rounded-md px-4 py-2 text-sm font-medium transition disabled:opacity-50 ${styles} ${className}`}
+      className={`rounded-md px-4 py-2 text-sm font-medium transition duration-150 hover:-translate-y-px active:translate-y-0 active:scale-95 disabled:pointer-events-none disabled:opacity-50 ${styles} ${className}`}
     />
   );
 }
@@ -46,7 +46,7 @@ export function Button({
 export function ErrorText({ children }: { children?: ReactNode }) {
   if (!children) return null;
   return (
-    <p role="alert" className="rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
+    <p role="alert" className="animate-shake rounded-md bg-red-50 px-3 py-2 text-sm text-red-700">
       {children}
     </p>
   );
