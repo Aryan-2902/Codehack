@@ -1,0 +1,210 @@
+// Source of truth for all data models (see hackathon plan, "Architecture & Data Models").
+// Feature 1 (accounts/roles/verification) uses User, EligibilityGrant and AuditLog;
+// the remaining models are declared up front so later features don't churn migrations.
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  STUDENT
+  OWNER
+  MANAGER
+  ADMIN
+}
+
+enum ResourceCategory {
+  WORKSHOP_TOOL
+  LAB_INSTRUMENT
+  BOOKABLE_SPACE
+}
+
+enum ResourceStatus {
+  ACTIVE
+  MAINTENANCE
+  RETIRED
+}
+
+enum BookingStatus {
+  DRAFT
+  PENDING
+  APPROVED
+  REJECTED
+  WAITLISTED
+  CANCELLED
+  CHECKED_IN
+  COMPLETED
+}
+
+enum ReportStage {
+  CHECK_IN
+  CHECK_OUT
+}
+
+enum IncidentType {
+  DAMAGE
+  DELAY
+  CONFLICT
+}
+
+enum IncidentStatus {
+  OPEN
+  RESOLVED
+}
+
+model User {
+  id            String   @id @default(cuid())
+  name          String
+  email         String   @unique
+  passwordHash  String
+  role          Role     @default(STUDENT)
+  department    String
+  // Global verification flags an Owner/Manager/Admin can set ("ID verified", "safety training completed").
+  verified      Boolean  @default(false)
+  safetyTrained Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  resources         Resource[]
+  bookings          BookingRequest[]      @relation("Requester")
+  managedBookings   BookingRequest[]      @relation("Manager")
+  eligibilityGrants EligibilityGrant[]    @relation("GrantedTo")
+  grantsGiven       EligibilityGrant[]    @relation("GrantedBy")
+  conditionReports  ConditionReport[]
+  incidents         Incident[]
+  auditLogs         AuditLog[]
+  waitlistEntries   WaitlistEntry[]
+  notifications     Notification[]
+}
+
+// Per-resource eligibility: the User–Resource pairing (e.g. completed the laser-cutter induction).
+model EligibilityGrant {
+  id          String   @id @default(cuid())
+  userId      String
+  resourceId  String
+  grantedById String
+  note        String?
+  createdAt   DateTime @default(now())
+
+  user      User     @relation("GrantedTo", fields: [userId], references: [id], onDelete: Cascade)
+  resource  Resource @relation(fields: [resourceId], references: [id], onDelete: Cascade)
+  grantedBy User     @relation("GrantedBy", fields: [grantedById], references: [id])
+
+  @@unique([userId, resourceId])
+}
+
+model Resource {
+  id                 String           @id @default(cuid())
+  name               String
+  category           ResourceCategory
+  ownerId            String
+  description        String
+  location           String
+  photos             String[]
+  eligibilityRules   Json?
+  availabilityWindows Json?
+  conditionAtListing String?
+  status             ResourceStatus   @default(ACTIVE)
+  createdAt          DateTime         @default(now())
+  updatedAt          DateTime         @updatedAt
+
+  owner             User               @relation(fields: [ownerId], references: [id])
+  bookings          BookingRequest[]
+  waitlistEntries   WaitlistEntry[]
+  eligibilityGrants EligibilityGrant[]
+}
+
+model BookingRequest {
+  id              String        @id @default(cuid())
+  resourceId      String
+  requesterId     String
+  managerId       String?
+  purpose         String
+  startsAt        DateTime
+  endsAt          DateTime
+  status          BookingStatus @default(DRAFT)
+  decisionReason  String?
+  checkedInAt     DateTime?
+  checkedOutAt    DateTime?
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  resource         Resource          @relation(fields: [resourceId], references: [id])
+  requester        User              @relation("Requester", fields: [requesterId], references: [id])
+  manager          User?             @relation("Manager", fields: [managerId], references: [id])
+  conditionReports ConditionReport[]
+  incidents        Incident[]
+}
+
+model ConditionReport {
+  id         String      @id @default(cuid())
+  bookingId  String
+  stage      ReportStage
+  photos     String[]
+  notes      String
+  reportedBy String
+  createdAt  DateTime    @default(now())
+
+  booking  BookingRequest @relation(fields: [bookingId], references: [id])
+  reporter User           @relation(fields: [reportedBy], references: [id])
+}
+
+model Incident {
+  id          String         @id @default(cuid())
+  bookingId   String
+  type        IncidentType
+  description String
+  reportedBy  String
+  resolution  String?
+  status      IncidentStatus @default(OPEN)
+  createdAt   DateTime       @default(now())
+
+  booking  BookingRequest @relation(fields: [bookingId], references: [id])
+  reporter User           @relation(fields: [reportedBy], references: [id])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  actorId    String
+  action     String
+  targetType String
+  targetId   String
+  metadata   Json?
+  createdAt  DateTime @default(now())
+
+  actor User @relation(fields: [actorId], references: [id])
+
+  @@index([targetType, targetId])
+}
+
+model WaitlistEntry {
+  id              String    @id @default(cuid())
+  resourceId      String
+  userId          String
+  startsAt        DateTime
+  endsAt          DateTime
+  position        Int
+  notifiedAt      DateTime?
+  createdAt       DateTime  @default(now())
+
+  resource Resource @relation(fields: [resourceId], references: [id])
+  user     User     @relation(fields: [userId], references: [id])
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  userId    String
+  message   String
+  link      String?
+  read      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId, read])
+}
