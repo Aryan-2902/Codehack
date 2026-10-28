@@ -11,6 +11,7 @@ import {
   formatDate,
   minuteToTime,
 } from "@/lib/format";
+import { CategoryArt } from "@/components/category-art";
 import { Card } from "@/components/ui";
 
 export default async function ResourceDetailPage({ params }: PageProps<"/resources/[id]">) {
@@ -68,12 +69,43 @@ export default async function ResourceDetailPage({ params }: PageProps<"/resourc
         </div>
       </div>
 
-      {r.photos.length > 0 && (
+      {r.photos.length > 0 ? (
         <div className="flex gap-3 overflow-x-auto">
           {r.photos.map((url) => (
             // eslint-disable-next-line @next/next/no-img-element
             <img key={url} src={url} alt="" className="h-48 rounded-lg object-cover" />
           ))}
+        </div>
+      ) : (
+        <CategoryArt category={r.category} className="h-40 rounded-xl" />
+      )}
+
+      {r.ownerId !== user.id && (
+        <div className="animate-fade-up flex flex-wrap items-center gap-3">
+          {r.status === "ACTIVE" && eligibility.eligible ? (
+            <Link
+              href={`/resources/${r.id}/book`}
+              className="rounded-md bg-indigo-600 px-5 py-2.5 font-medium text-white shadow-lg shadow-indigo-600/30 transition hover:-translate-y-0.5 hover:bg-indigo-700 active:scale-95"
+            >
+              Request booking
+            </Link>
+          ) : (
+            <span
+              aria-disabled
+              className="cursor-not-allowed rounded-md bg-slate-200 px-5 py-2.5 font-medium text-slate-500"
+            >
+              Request booking
+            </span>
+          )}
+          {r.status !== "ACTIVE" ? (
+            <p className="text-sm text-slate-600">Not open for booking right now.</p>
+          ) : (
+            !eligibility.eligible && (
+              <p className="text-sm text-slate-600">
+                Meet the requirements under &ldquo;Who can book&rdquo; to request this resource.
+              </p>
+            )
+          )}
         </div>
       )}
 

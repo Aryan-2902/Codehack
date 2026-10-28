@@ -47,6 +47,15 @@ All accounts use the password `Demo@1234`.
    meet that resource's access conditions. Filters live in the URL, so searches are shareable, and
    the same query works over the API: `GET /api/resources?q=&category=&location=&date=&from=&to=&eligible=1`.
 
+4. **Booking requests & eligibility checks**: a three-step flow (details, review, submit). Step 1
+   saves a draft; step 2 runs the eligibility check and shows every rule that passed or failed
+   with a clear reason; submit is blocked until they all pass and is re-checked on the server.
+   Rules cover resource status, account type, department, ID verification, safety training,
+   per-equipment approval, opening hours (multi-day pick-up/return supported), blackout dates, max
+   booking length and the per-resource active-request limit. Warnings (already booked, supervision,
+   deposit) don't block. Requesters manage drafts and requests under **My bookings** (resume,
+   discard, cancel). Submissions and eligibility checks are written to the audit log.
+
 ## Photo uploads (optional)
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable

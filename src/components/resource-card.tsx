@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { CategoryArt } from "@/components/category-art";
 import type { ResourceResult } from "@/lib/search";
 import { CATEGORY_LABELS, STATUS_LABELS } from "@/lib/format";
 
@@ -21,9 +22,10 @@ export function ResourceCard({ resource: r, index }: { resource: ResourceResult;
               className="h-full w-full object-cover transition duration-500 group-hover:scale-110"
             />
           ) : (
-            <div className="flex h-full items-center justify-center bg-gradient-to-br from-slate-100 to-slate-200 text-sm text-slate-400 transition duration-500 group-hover:scale-110">
-              No photo
-            </div>
+            <CategoryArt
+              category={r.category}
+              className="h-full w-full transition duration-500 group-hover:scale-110"
+            />
           )}
         </div>
         <div className="space-y-1 p-4">

@@ -96,3 +96,24 @@ export const resourceSchema = z
   });
 
 export type ResourceInput = z.infer<typeof resourceSchema>;
+
+export const MIN_PURPOSE_LENGTH = 10;
+
+const dateString = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/, "Use YYYY-MM-DD")
+  .refine((d) => !Number.isNaN(Date.parse(`${d}T00:00:00Z`)), "Invalid date");
+const timeString = z.string().regex(/^([01]\d|2[0-3]):[0-5]\d$/, "Use HH:MM");
+
+// A draft may be saved with a short purpose; submitting enforces the minimum.
+export const bookingUpdateSchema = z.object({
+  startDate: dateString,
+  startTime: timeString,
+  endDate: dateString,
+  endTime: timeString,
+  purpose: z.string().trim().max(500).default(""),
+});
+
+export const bookingCreateSchema = bookingUpdateSchema.extend({
+  resourceId: z.string().min(1),
+});

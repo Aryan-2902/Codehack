@@ -79,6 +79,16 @@ body {
   }
 }
 
+@keyframes bob {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
+}
+
 @keyframes gradient-shift {
   0% {
     background-position: 0% 50%;
@@ -122,6 +132,23 @@ body {
 
 .animate-float {
   animation: float 14s ease-in-out infinite;
+}
+
+@keyframes draw {
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+/* Strokes draw themselves in; 160 is longer than any path it is applied to. */
+.animate-draw {
+  stroke-dasharray: 160;
+  stroke-dashoffset: 160;
+  animation: draw 0.6s ease-out forwards;
+}
+
+.animate-bob {
+  animation: bob 3.2s ease-in-out infinite;
 }
 
 .animate-gradient-text {
