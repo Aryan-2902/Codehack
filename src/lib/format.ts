@@ -33,6 +33,19 @@ export function timeToMinute(time: string) {
   return h * 60 + m;
 }
 
+// Slot times are campus-local clock times (IST, UTC+05:30); instants are stored in UTC.
+export const CAMPUS_UTC_OFFSET_MINUTES = 330;
+
+/** A campus-local date + minute range -> the UTC instants it covers. */
+export function windowToInstants(date: string, startMinute: number, endMinute: number) {
+  const midnightUtc = Date.parse(`${date}T00:00:00.000Z`);
+  const shift = CAMPUS_UTC_OFFSET_MINUTES * 60_000;
+  return {
+    startsAt: new Date(midnightUtc + startMinute * 60_000 - shift),
+    endsAt: new Date(midnightUtc + endMinute * 60_000 - shift),
+  };
+}
+
 /** Date column -> "YYYY-MM-DD" (stored at UTC midnight). */
 export function toDateInput(date: Date | string) {
   return new Date(date).toISOString().slice(0, 10);

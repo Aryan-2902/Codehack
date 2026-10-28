@@ -129,6 +129,20 @@ body {
   animation: gradient-shift 6s ease infinite;
 }
 
+@keyframes progress {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(350%);
+  }
+}
+
+/* Thin indeterminate bar shown while a search is loading. */
+.progress-bar {
+  animation: progress 1s ease-in-out infinite;
+}
+
 .skeleton {
   background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
   background-size: 200% 100%;

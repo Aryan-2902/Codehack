@@ -3,21 +3,17 @@ import { db } from "@/lib/db";
 import { handle, parseBody } from "@/lib/api";
 import { requireApiUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { parseSearch } from "@/lib/availability";
 import { resourceInclude, splitInput } from "@/lib/resources";
+import { searchResources } from "@/lib/search";
 import { resourceSchema } from "@/lib/validation";
 
-export const GET = handle(async () => {
+// Query params: q, category, location, date (YYYY-MM-DD), from/to (HH:MM), eligible=1
+export const GET = handle(async (req: Request) => {
   const user = await requireApiUser();
-  const resources = await db.resource.findMany({
-    // Retired listings are hidden except from their owner and admins.
-    where:
-      user.role === "ADMIN"
-        ? undefined
-        : { OR: [{ status: { not: "RETIRED" } }, { ownerId: user.id }] },
-    include: { owner: resourceInclude.owner },
-    orderBy: { createdAt: "desc" },
-  });
-  return NextResponse.json({ resources });
+  const search = parseSearch(Object.fromEntries(new URL(req.url).searchParams));
+  const resources = await searchResources(user, search);
+  return NextResponse.json({ resources, count: resources.length });
 });
 
 export const POST = handle(async (req: Request) => {

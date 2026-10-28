@@ -40,6 +40,13 @@ All accounts use the password `Demo@1234`.
    (active / under maintenance / retired). Everyone signed in can browse listings and see whether
    they meet a resource's access conditions. Seeded with 7 demo resources.
 
+3. **Search & filtering**: keyword search across name, description, location and category
+   (multi-word searches narrow the results), plus filters for category, location, availability
+   (a date, optionally a from/to time window that must fit an open slot, the max booking length
+   and existing bookings) and "only resources I'm eligible for". Every card shows whether you
+   meet that resource's access conditions. Filters live in the URL, so searches are shareable, and
+   the same query works over the API: `GET /api/resources?q=&category=&location=&date=&from=&to=&eligible=1`.
+
 ## Photo uploads (optional)
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
