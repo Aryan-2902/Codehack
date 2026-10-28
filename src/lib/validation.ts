@@ -114,6 +114,16 @@ export const bookingUpdateSchema = z.object({
   purpose: z.string().trim().max(500).default(""),
 });
 
-export const bookingCreateSchema = bookingUpdateSchema.extend({
+export const decisionSchema = z
+  .object({
+    action: z.enum(["approve", "reject", "waitlist", "cancel"]),
+    reason: z.string().trim().max(500).optional(),
+  })
+  .refine(
+    (d) => !["reject", "cancel"].includes(d.action) || (d.reason?.length ?? 0) >= 5,
+    { path: ["reason"], message: "Give a reason (at least 5 characters) so the requester knows why" },
+  );
+
+export const bookingCreateSchema =bookingUpdateSchema.extend({
   resourceId: z.string().min(1),
 });

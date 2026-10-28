@@ -3,19 +3,21 @@ import { db } from "@/lib/db";
 import { handle } from "@/lib/api";
 import { ApiError, requireApiUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
+import { promoteWaitlist } from "@/lib/approvals";
 import { loadOwnBooking } from "@/lib/bookings";
+import { notify } from "@/lib/notifications";
 
 type Ctx = { params: Promise<{ id: string }> };
 
-// A requester can withdraw a request that hasn't been decided yet.
-// (Cancelling an approved booking and promoting the waitlist arrives with the approval workflow.)
+// A requester withdraws their own request or booking. Cancelling an approved booking frees the
+// slot, so the first person on the waitlist for it is promoted and notified.
 export const POST = handle(async (_req: Request, { params }: Ctx) => {
   const user = await requireApiUser();
   const { id } = await params;
   const booking = await loadOwnBooking(user, id);
 
   const updated = await db.bookingRequest.updateMany({
-    where: { id, status: { in: ["PENDING", "WAITLISTED"] } },
+    where: { id, status: { in: ["PENDING", "WAITLISTED", "APPROVED"] } },
     data: { status: "CANCELLED" },
   });
   if (updated.count === 0) {
@@ -27,7 +29,22 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
     action: "booking.cancelled",
     targetType: "BookingRequest",
     targetId: id,
-    metadata: { from: booking.status },
+    metadata: { from: booking.status, by: "requester" },
   });
+
+  if (booking.status === "APPROVED") {
+    const resource = await db.resource.findUniqueOrThrow({
+      where: { id: booking.resourceId },
+      select: { name: true, ownerId: true },
+    });
+    await notify([
+      {
+        userId: resource.ownerId,
+        message: `${user.name} cancelled their approved booking for ${resource.name}.`,
+        link: "/review",
+      },
+    ]);
+    await promoteWaitlist(booking.resourceId, booking, user.id);
+  }
   return NextResponse.json({ ok: true });
 });

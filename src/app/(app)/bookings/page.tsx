@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { waitlistPosition } from "@/lib/approvals";
 import { formatWindow } from "@/lib/format";
 import { BookingActions } from "@/components/booking-actions";
 import { BookingStatusBadge } from "@/components/booking-status";
@@ -16,6 +17,15 @@ export default async function BookingsPage() {
     include: { resource: { select: { id: true, name: true } } },
     orderBy: { startsAt: "desc" },
   });
+
+  // Where each waitlisted request stands in the first-come-first-served queue.
+  const positions = new Map(
+    await Promise.all(
+      bookings
+        .filter((b) => b.status === "WAITLISTED")
+        .map(async (b) => [b.id, await waitlistPosition(b)] as const),
+    ),
+  );
 
   type Row = (typeof bookings)[number];
   const groups: [string, Row[]][] = [
@@ -67,10 +77,19 @@ export default async function BookingsPage() {
                           {b.resource.name}
                         </Link>
                         <BookingStatusBadge status={b.status} />
+                        {positions.has(b.id) && (
+                          <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
+                            #{positions.get(b.id)} in line
+                          </span>
+                        )}
                       </div>
                       <p className="text-sm text-slate-600">{formatWindow(b.startsAt, b.endsAt)}</p>
-                      {b.purpose && (
-                        <p className="line-clamp-1 text-sm text-slate-500">{b.purpose}</p>
+                      {b.decisionReason && b.status !== "DRAFT" ? (
+                        <p className="line-clamp-2 text-sm text-slate-600">{b.decisionReason}</p>
+                      ) : (
+                        b.purpose && (
+                          <p className="line-clamp-1 text-sm text-slate-500">{b.purpose}</p>
+                        )
                       )}
                     </div>
                     <BookingActions id={b.id} resourceId={b.resource.id} status={b.status} />

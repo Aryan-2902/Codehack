@@ -4,6 +4,8 @@ import { handle } from "@/lib/api";
 import { ApiError, requireApiUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { bookingFormValues, evaluateForUser, loadOwnBooking, toWindow } from "@/lib/bookings";
+import { needsManager } from "@/lib/approval-rules";
+import { notify } from "@/lib/notifications";
 import { MIN_PURPOSE_LENGTH } from "@/lib/validation";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -58,6 +60,23 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
     targetId: id,
     metadata: { resourceId: draft.resourceId },
   });
+
+  // Tell whoever decides on this resource: its owner, plus managers when it needs one.
+  const resource = await db.resource.findUniqueOrThrow({
+    where: { id: draft.resourceId },
+    select: { name: true, ownerId: true, requiresSupervision: true, depositRequired: true },
+  });
+  const managers = needsManager(resource)
+    ? await db.user.findMany({ where: { role: "MANAGER" }, select: { id: true } })
+    : [];
+  const reviewerIds = [...new Set([resource.ownerId, ...managers.map((m) => m.id)])];
+  await notify(
+    reviewerIds.map((userId) => ({
+      userId,
+      message: `${user.name} requested ${resource.name}${needsManager(resource) ? " (needs manager approval)" : ""}.`,
+      link: "/review",
+    })),
+  );
 
   const booking = await db.bookingRequest.findUniqueOrThrow({ where: { id } });
   return NextResponse.json({ booking, evaluation });

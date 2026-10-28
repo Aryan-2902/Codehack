@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
+import { waitlistPosition } from "@/lib/approvals";
 import { canViewBooking } from "@/lib/bookings";
 import { CATEGORY_LABELS, formatWindow } from "@/lib/format";
 import { BookingActions } from "@/components/booking-actions";
@@ -18,10 +19,12 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
     include: {
       resource: { select: { id: true, name: true, category: true, location: true, ownerId: true } },
       requester: { select: { name: true, department: true } },
+      manager: { select: { name: true } },
     },
   });
   if (!b || !canViewBooking(user, b)) notFound();
   const mine = b.requesterId === user.id;
+  const position = b.status === "WAITLISTED" ? await waitlistPosition(b) : null;
 
   return (
     <div className="max-w-2xl space-y-6">
@@ -36,7 +39,14 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
             {CATEGORY_LABELS[b.resource.category]} · {b.resource.location}
           </p>
         </div>
-        <BookingStatusBadge status={b.status} />
+        <div className="flex items-center gap-2">
+          {position && (
+            <span className="animate-pop-in rounded-full bg-violet-100 px-2.5 py-0.5 text-xs font-medium text-violet-800">
+              #{position} in line
+            </span>
+          )}
+          <BookingStatusBadge status={b.status} />
+        </div>
       </div>
 
       <Card>
@@ -57,7 +67,9 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
           </div>
           {b.decisionReason && (
             <div>
-              <dt className="text-slate-500">Reviewer&apos;s note</dt>
+              <dt className="text-slate-500">
+                Decision{b.manager ? ` by ${b.manager.name}` : ""}
+              </dt>
               <dd className="mt-0.5">{b.decisionReason}</dd>
             </div>
           )}

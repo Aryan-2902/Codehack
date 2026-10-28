@@ -61,17 +61,24 @@ export function BookingActions({
     );
   }
 
-  if (status === "PENDING" || status === "WAITLISTED") {
+  if (status === "PENDING" || status === "WAITLISTED" || status === "APPROVED") {
+    const approved = status === "APPROVED";
     return (
       <div className="flex flex-col items-end gap-1">
         <Button
           variant="ghost"
           disabled={pending}
           onClick={() =>
-            run(`/api/bookings/${id}/cancel`, "POST", "Withdraw this request?")
+            run(
+              `/api/bookings/${id}/cancel`,
+              "POST",
+              approved
+                ? "Cancel this approved booking? The next person on the waitlist will get the slot."
+                : "Withdraw this request?",
+            )
           }
         >
-          {pending ? "Cancelling…" : "Cancel request"}
+          {pending ? "Cancelling…" : approved ? "Cancel booking" : "Cancel request"}
         </Button>
         {error && <p className="text-xs text-rose-600">{error}</p>}
       </div>

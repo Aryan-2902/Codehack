@@ -56,6 +56,17 @@ All accounts use the password `Demo@1234`.
    deposit) don't block. Requesters manage drafts and requests under **My bookings** (resume,
    discard, cancel). Submissions and eligibility checks are written to the audit log.
 
+5. **Approval, rejection & waitlisting**: a **Review** dashboard for owners (their own resources),
+   managers and admins (everything), with a badge for requests awaiting a decision. Each request
+   shows the requester's eligibility and the competing requests for the same slot, so nobody
+   approves blind. Reviewers can approve, reject (a reason is required), or waitlist a request
+   when its slot is already booked. The waitlist is first come, first served; cancelling an
+   approved booking (by the requester or a reviewer) promotes the next people in line, who are
+   notified. Resources that need supervision or a deposit can only be decided by a manager. Every
+   outcome stores the rule that produced it (for example "you are #2 in line") and is written to
+   the audit log. Notifications are queued for requesters and reviewers; the in-app feed to read
+   them comes with the notifications feature.
+
 ## Photo uploads (optional)
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
