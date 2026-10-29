@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
+    "postinstall": "prisma generate",
     "check:auth": "tsx scripts/check-api-auth.ts"
   },
   "dependencies": {
