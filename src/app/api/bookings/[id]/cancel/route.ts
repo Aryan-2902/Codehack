@@ -5,6 +5,7 @@ import { ApiError, requireApiUser } from "@/lib/auth";
 import { audit } from "@/lib/audit";
 import { promoteWaitlist } from "@/lib/approvals";
 import { loadOwnBooking } from "@/lib/bookings";
+import { cooldownEndsAt } from "@/lib/fair-usage";
 import { notify } from "@/lib/notifications";
 
 type Ctx = { params: Promise<{ id: string }> };
@@ -16,9 +17,13 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
   const { id } = await params;
   const booking = await loadOwnBooking(user, id);
 
+  // Fair usage: walking away from an approved slot pauses re-requesting that resource.
+  // Withdrawing a request that was never approved costs nothing.
+  const cooldownUntil = booking.status === "APPROVED" ? cooldownEndsAt(new Date()) : null;
+
   const updated = await db.bookingRequest.updateMany({
     where: { id, status: { in: ["PENDING", "WAITLISTED", "APPROVED"] } },
-    data: { status: "CANCELLED" },
+    data: { status: "CANCELLED", ...(cooldownUntil ? { cooldownUntil } : {}) },
   });
   if (updated.count === 0) {
     throw new ApiError(409, "This request can't be cancelled in its current state");
@@ -29,7 +34,13 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
     action: "booking.cancelled",
     targetType: "BookingRequest",
     targetId: id,
-    metadata: { from: booking.status, by: "requester" },
+    metadata: {
+      from: booking.status,
+      by: "requester",
+      ...(cooldownUntil
+        ? { cooldownUntil: cooldownUntil.toISOString(), rule: "fair usage: cooldown after cancelling an approved booking" }
+        : {}),
+    },
   });
 
   if (booking.status === "APPROVED") {
@@ -47,5 +58,5 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
     ]);
     await promoteWaitlist(booking.resourceId, booking, user.id);
   }
-  return NextResponse.json({ ok: true });
+  return NextResponse.json({ ok: true, cooldownUntil });
 });

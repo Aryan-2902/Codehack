@@ -68,6 +68,11 @@ export default async function AppLayout({ children }: { children: React.ReactNod
               People
             </Link>
           )}
+          {user.role === "ADMIN" && (
+            <Link href="/audit" className={link}>
+              Audit
+            </Link>
+          )}
           <div className="ml-auto flex items-center gap-2">
             <NotificationBell initialUnread={unread} />
             <Link href="/profile" className="flex items-center gap-2 hover:underline">

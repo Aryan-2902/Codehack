@@ -12,6 +12,7 @@ export type NoticeKind =
   | "checkin"
   | "checkout"
   | "overdue"
+  | "noshow"
   | "reminder"
   | "incident"
   | "info";

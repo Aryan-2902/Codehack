@@ -72,6 +72,12 @@ export function formatWindow(startsAt: Date | string, endsAt: Date | string) {
   return `${formatLocalDate(s.date)} ${minuteToTime(s.minute)} → ${formatLocalDate(e.date)} ${minuteToTime(e.minute)}`;
 }
 
+/** A UTC instant as campus-local "Mon, 2 Nov 2026, 10:30". */
+export function formatInstant(instant: Date | string) {
+  const l = instantToLocal(instant);
+  return `${formatLocalDate(l.date)}, ${minuteToTime(l.minute)}`;
+}
+
 export const BOOKING_STATUS_LABELS: Record<string, string> = {
   DRAFT: "Draft",
   PENDING: "Awaiting review",
@@ -81,6 +87,7 @@ export const BOOKING_STATUS_LABELS: Record<string, string> = {
   CANCELLED: "Cancelled",
   CHECKED_IN: "In use",
   COMPLETED: "Completed",
+  NO_SHOW: "No-show",
 };
 
 export const BOOKING_STATUS_STYLES: Record<string, string> = {
@@ -92,6 +99,7 @@ export const BOOKING_STATUS_STYLES: Record<string, string> = {
   CANCELLED: "bg-slate-100 text-slate-500",
   CHECKED_IN: "bg-sky-100 text-sky-800",
   COMPLETED: "bg-indigo-100 text-indigo-800",
+  NO_SHOW: "bg-orange-100 text-orange-800",
 };
 
 /** A campus-local date + minute range -> the UTC instants it covers. */
@@ -141,6 +149,7 @@ export const NOTIFICATION_KIND_STYLES: Record<string, string> = {
   checkin: "bg-sky-500",
   checkout: "bg-sky-500",
   overdue: "bg-rose-500",
+  noshow: "bg-orange-500",
   reminder: "bg-amber-500",
   incident: "bg-orange-500",
   info: "bg-slate-400",

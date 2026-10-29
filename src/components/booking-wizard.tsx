@@ -6,6 +6,7 @@ import { useState } from "react";
 import { Button, ErrorText, Field, Input } from "@/components/ui";
 import { EvaluationChecklist } from "@/components/evaluation-checklist";
 import type { Evaluation } from "@/lib/booking-rules";
+import { FAIR_USAGE_SUMMARY } from "@/lib/fair-usage";
 import { DAY_NAMES, formatLocalDate, formatDate } from "@/lib/format";
 import { MIN_PURPOSE_LENGTH } from "@/lib/validation";
 
@@ -352,6 +353,12 @@ export function BookingWizard({
                   .join(", ")}
               </li>
             )}
+          </ul>
+          <p className="mt-3 font-medium text-slate-800">Fair-usage rules</p>
+          <ul className="mt-1 list-disc space-y-1 pl-5">
+            {FAIR_USAGE_SUMMARY.map((rule) => (
+              <li key={rule}>{rule}</li>
+            ))}
           </ul>
         </aside>
       )}

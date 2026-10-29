@@ -7,6 +7,7 @@ import {
   localToInstant,
   minuteToTime,
 } from "@/lib/format";
+import { fairUsageChecks, type UsageContext } from "@/lib/fair-usage";
 import {
   eligibilityChecks,
   type Check,
@@ -67,6 +68,8 @@ export function evaluateBooking(args: {
   activeCount: number;
   /** An approved booking already overlaps the window. */
   hasConflict: boolean;
+  /** Fair-usage context; when given, the overall/weekly/cooldown rules are checked too. */
+  usage?: UsageContext;
   now?: Date;
 }): Evaluation {
   const { user, resource, window, now = new Date() } = args;
@@ -185,6 +188,8 @@ export function evaluateBooking(args: {
       args.activeCount === 1 ? "" : "s"
     } for this resource (limit ${resource.maxConcurrentBookings})`,
   });
+
+  if (args.usage) checks.push(...fairUsageChecks(args.usage, now));
 
   if (args.hasConflict) {
     warnings.push(

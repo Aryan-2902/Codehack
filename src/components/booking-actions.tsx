@@ -73,7 +73,7 @@ export function BookingActions({
               `/api/bookings/${id}/cancel`,
               "POST",
               approved
-                ? "Cancel this approved booking? The next person on the waitlist will get the slot."
+                ? "Cancel this approved booking? The next person on the waitlist will get the slot, and fair-usage rules pause new requests for this resource for 24 hours."
                 : "Withdraw this request?",
             )
           }

@@ -11,6 +11,10 @@ export type SessionPayload = { userId: string; role: Role };
 function secretKey() {
   const secret = process.env.AUTH_SECRET;
   if (!secret) throw new Error("AUTH_SECRET is not set");
+  // The sample secret from .env.example must never sign sessions on a real deployment.
+  if (process.env.VERCEL_ENV === "production" && (secret.length < 32 || secret.startsWith("dev-only"))) {
+    throw new Error("AUTH_SECRET must be a long random value in production");
+  }
   return new TextEncoder().encode(secret);
 }
 

@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { checkEligibility } from "@/lib/eligibility";
+import { loadResourceHistory } from "@/lib/audit-log";
 import { canEditResource, canViewResource, resourceInclude } from "@/lib/resources";
 import {
   CATEGORY_LABELS,
@@ -11,6 +12,7 @@ import {
   formatDate,
   minuteToTime,
 } from "@/lib/format";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { CategoryArt } from "@/components/category-art";
 import { Card } from "@/components/ui";
 
@@ -26,6 +28,7 @@ export default async function ResourceDetailPage({ params }: PageProps<"/resourc
   });
   const eligibility = checkEligibility(user, r, Boolean(grant));
   const editable = canEditResource(user, r);
+  const history = editable ? await loadResourceHistory(r.id) : [];
 
   const conditions = [
     r.allowedRoles.length > 0 && `Open to: ${r.allowedRoles.map((x) => x.toLowerCase()).join(", ")}`,
@@ -201,6 +204,13 @@ export default async function ResourceDetailPage({ params }: PageProps<"/resourc
           </div>
         )}
       </Card>
+
+      {editable && (
+        <Card>
+          <h2 className="mb-3 font-semibold">Listing history</h2>
+          <ActivityTimeline entries={history} empty="No changes recorded yet." />
+        </Card>
+      )}
     </div>
   );
 }

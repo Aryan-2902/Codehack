@@ -86,11 +86,78 @@ All accounts use the password `Demo@1234`.
    waitlisting and promotion, cancellations, check-in/out, overdue returns, start reminders
    (one hour before) and incidents.
 
+9. **Fair usage & allocation rules**: no one hogs a resource. Each person can have at most 3 active
+   bookings at once (pending, approved or in use), at most 2 bookings of the same resource in one
+   week (Monday to Sunday, campus time), and after cancelling an approved booking or missing one
+   (a no-show) they must wait 24 hours before re-requesting that resource. Withdrawing a request
+   that was never approved, or a reviewer cancelling, costs nothing. Approved bookings whose window
+   ends with no check-in are marked **No-show** automatically. Every outcome states the rule that
+   produced it ("Fair-usage rule: at most 3 active bookings at once (you have 3)"; "you are #2
+   in line, first come, first served"), and **My bookings** shows where you stand.
+10. **Audit history**: every state change writes an audit entry: accounts, verification and role
+    changes, listings, equipment approvals, eligibility checks, requests, decisions, waitlisting
+    and promotion, cancellations, check-in/out, overdue and no-show flags, incidents and
+    suspensions, sign-ins and failed sign-ins. Each booking page has a **History** timeline that
+    the requester, the owner, managers and admins can replay; owners and admins also see a
+    **Listing history**. Admins get a platform-wide **Audit** page with filters, search and paging,
+    plus a CSV export (itself audited, and safe to open in a spreadsheet).
+11. **Privacy, security & role-based access**: see the notes below.
+
+## Privacy, security & fairness notes
+
+**Access control**
+- Roles: student, owner, manager, admin. A user sees only their own bookings; an owner sees the
+  requests for resources they own; managers and admins see everything. Decisions on supervised or
+  deposit-backed resources are reserved for managers.
+- Every API handler checks the session and role itself, and every signed-in page checks the session
+  itself (a layout check alone is not enough). `npm run check:auth` verifies this automatically
+  and fails if any route or page is left open.
+- The role is always read from the database, never trusted from the session token, so changing a
+  role or removing a user takes effect immediately.
+
+**Authentication & sessions**
+- Passwords are hashed with bcrypt. Sessions are signed JWTs in an HttpOnly, SameSite=Lax cookie
+  (Secure in production). Forged, unsigned, expired and tampered tokens are rejected.
+- Repeated failed sign-ins for the same email and address lock that pair out for 15 minutes;
+  sign-ups are rate-limited per address. Sign-ins, failures and lockouts are audited. The limiter
+  is in memory per server instance, so on serverless it slows guessing rather than guaranteeing a
+  global cap.
+- A deployed site refuses to start with the sample `AUTH_SECRET`.
+
+**Web protections**
+- Writes from another site are rejected (Origin check on top of SameSite cookies). API responses are
+  never cached. Security headers: `X-Content-Type-Options`, `X-Frame-Options: DENY`,
+  `Referrer-Policy`, `Permissions-Policy`, `Strict-Transport-Security`.
+- All input is validated on the server with zod; database access goes through Prisma (parameterised).
+
+**Privacy of uploads**
+- Condition and incident photos are stored in the database and only served through a
+  permission-checked route: the uploader, the booking's two parties, managers and admins. Anyone
+  else gets the same 404 as a photo that does not exist. Only JPEG, PNG and WebP up to 2 MB are
+  accepted (no SVG).
+- Demo data is fictional. The audit log never stores typed passwords.
+
+**Fairness & explainability**
+- The fair-usage limits and the first-come-first-served waitlist apply to everyone equally, and every
+  allocation outcome (approved, rejected, waitlisted with position, promoted, no-show, blocked by a
+  limit) shows the rule behind it. Penalties such as suspensions are always a manager's explicit
+  decision, never automatic, and are visible to both parties.
+
+**Known limitations**
+- No strict Content-Security-Policy yet (it needs per-request nonces for Next.js inline scripts).
+- JWTs cannot be revoked before they expire (7 days); signing out clears the cookie on that browser.
+- No email or SMS notifications, and no multi-factor authentication.
+- Overdue, reminder and no-show events fire when someone loads a page rather than from a worker.
+
 ## Photo uploads (optional)
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
 photo uploads on listings. Without them, uploads return a clear "not configured" error and
 everything else still works.
+
+## Checks
+
+- `npm run check:auth` fails if any API route or signed-in page could be reached without a session.
 
 ## Demo setting
 

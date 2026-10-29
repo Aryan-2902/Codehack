@@ -39,6 +39,8 @@ enum BookingStatus {
   CANCELLED
   CHECKED_IN
   COMPLETED
+  // An approved booking whose window ended with no check-in. Starts a cooldown for that resource.
+  NO_SHOW
 }
 
 enum ReportStage {
@@ -185,6 +187,9 @@ model BookingRequest {
   checkedInAt      DateTime?
   checkedOutAt     DateTime?
   // Set once, so an overdue flag / start reminder is only raised a single time.
+  // After a requester cancels an approved booking, or misses one, they can't re-request this
+  // resource until this time (fair-usage cooldown).
+  cooldownUntil    DateTime?
   overdueFlaggedAt DateTime?
   reminderSentAt   DateTime?
   createdAt        DateTime      @default(now())
@@ -260,6 +265,8 @@ model AuditLog {
   actor User? @relation(fields: [actorId], references: [id])
 
   @@index([targetType, targetId])
+  @@index([createdAt])
+  @@index([actorId])
 }
 
 model WaitlistEntry {

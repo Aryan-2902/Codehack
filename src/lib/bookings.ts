@@ -2,6 +2,7 @@ import "server-only";
 import { db } from "@/lib/db";
 import { ApiError, type CurrentUser } from "@/lib/auth";
 import { evaluateBooking, windowInstants, type BookingWindow } from "@/lib/booking-rules";
+import { weekBounds } from "@/lib/fair-usage";
 import { instantToLocal, minuteToTime, timeToMinute } from "@/lib/format";
 import { canViewResource } from "@/lib/resources";
 
@@ -50,7 +51,8 @@ export async function evaluateForUser(
   }
 
   const { startsAt, endsAt } = windowInstants(window);
-  const [grant, activeCount, conflict] = await Promise.all([
+  const week = weekBounds(window.startDate);
+  const [grant, activeCount, conflict, activeTotal, weekCount, cooling] = await Promise.all([
     db.eligibilityGrant.findUnique({
       where: { userId_resourceId: { userId: user.id, resourceId } },
       select: { id: true },
@@ -68,6 +70,22 @@ export async function evaluateForUser(
       },
       select: { id: true },
     }),
+    db.bookingRequest.count({
+      where: { requesterId: user.id, status: { in: [...ACTIVE_STATUSES] } },
+    }),
+    db.bookingRequest.count({
+      where: {
+        requesterId: user.id,
+        resourceId,
+        status: { in: ["PENDING", "APPROVED", "CHECKED_IN", "COMPLETED"] },
+        startsAt: { gte: week.start, lt: week.end },
+      },
+    }),
+    db.bookingRequest.findFirst({
+      where: { requesterId: user.id, resourceId, cooldownUntil: { gt: new Date() } },
+      orderBy: { cooldownUntil: "desc" },
+      select: { cooldownUntil: true, status: true },
+    }),
   ]);
 
   const evaluation = evaluateBooking({
@@ -77,6 +95,13 @@ export async function evaluateForUser(
     window,
     activeCount,
     hasConflict: Boolean(conflict),
+    usage: {
+      activeTotal,
+      weekCount,
+      cooldown: cooling?.cooldownUntil
+        ? { until: cooling.cooldownUntil, reason: cooling.status === "NO_SHOW" ? "no_show" : "cancelled" }
+        : null,
+    },
   });
   return { resource, evaluation, startsAt, endsAt };
 }

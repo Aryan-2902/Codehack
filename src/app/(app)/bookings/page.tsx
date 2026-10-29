@@ -6,6 +6,7 @@ import { isOverdue } from "@/lib/checkin-rules";
 import { formatWindow } from "@/lib/format";
 import { BookingActions } from "@/components/booking-actions";
 import { BookingStatusBadge } from "@/components/booking-status";
+import { UsageSummary } from "@/components/usage-summary";
 
 export const metadata = { title: "My bookings · Campus Lab Share" };
 
@@ -18,6 +19,29 @@ export default async function BookingsPage() {
     include: { resource: { select: { id: true, name: true } } },
     orderBy: { startsAt: "desc" },
   });
+
+  // Fair-usage standing: active bookings against the cap, plus any cooldowns still running.
+  const now = new Date();
+  const active = bookings.filter((b) => ["PENDING", "APPROVED", "CHECKED_IN"].includes(b.status)).length;
+  const cooldowns = await db.bookingRequest
+    .findMany({
+      where: { requesterId: user.id, cooldownUntil: { gt: now } },
+      select: { status: true, cooldownUntil: true, resource: { select: { name: true } } },
+      orderBy: { cooldownUntil: "desc" },
+    })
+    .then((rows) => {
+      const seen = new Map<string, { resource: string; until: Date; reason: "cancelled" | "no_show" }>();
+      for (const r of rows) {
+        if (!seen.has(r.resource.name)) {
+          seen.set(r.resource.name, {
+            resource: r.resource.name,
+            until: r.cooldownUntil!,
+            reason: r.status === "NO_SHOW" ? "no_show" : "cancelled",
+          });
+        }
+      }
+      return [...seen.values()];
+    });
 
   // Where each waitlisted request stands in the first-come-first-served queue.
   const positions = new Map(
@@ -43,6 +67,8 @@ export default async function BookingsPage() {
           Your drafts, requests and past bookings.
         </p>
       </div>
+
+      <UsageSummary active={active} cooldowns={cooldowns} />
 
       {bookings.length === 0 ? (
         <div className="animate-pop-in rounded-xl border border-dashed border-slate-300 p-10 text-center">

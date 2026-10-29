@@ -3,9 +3,11 @@ import { notFound } from "next/navigation";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { waitlistPosition } from "@/lib/approvals";
+import { loadBookingTimeline } from "@/lib/audit-log";
 import { canViewBooking } from "@/lib/bookings";
 import { checkInState, formatLate, isOverdue, lateMinutes } from "@/lib/checkin-rules";
-import { CATEGORY_LABELS, formatWindow, timeAgo } from "@/lib/format";
+import { CATEGORY_LABELS, formatInstant, formatWindow, timeAgo } from "@/lib/format";
+import { ActivityTimeline } from "@/components/activity-timeline";
 import { BookingActions } from "@/components/booking-actions";
 import { BookingProgress } from "@/components/booking-progress";
 import { BookingStatusBadge } from "@/components/booking-status";
@@ -38,6 +40,7 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
   });
   if (!b || !canViewBooking(user, b)) notFound();
 
+  const timeline = await loadBookingTimeline(b.id);
   const now = new Date();
   const mine = b.requesterId === user.id;
   const position = b.status === "WAITLISTED" ? await waitlistPosition(b) : null;
@@ -78,6 +81,23 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
         <BookingProgress status={b.status} overdue={overdue} />
       </Card>
 
+      {b.status === "NO_SHOW" && (
+        <div className="animate-pop-in rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
+          <p className="font-semibold">Marked as a no-show</p>
+          <p className="mt-1">
+            This booking ended without a check-in.
+            {b.cooldownUntil && ` Under the fair-usage rules, this resource can be requested again after ${formatInstant(b.cooldownUntil)}.`}
+          </p>
+        </div>
+      )}
+      {b.status === "CANCELLED" && b.cooldownUntil && b.cooldownUntil > now && (
+        <div className="animate-pop-in rounded-xl border border-orange-200 bg-orange-50 p-4 text-sm text-orange-900">
+          <p className="font-semibold">Cooldown for this resource</p>
+          <p className="mt-1">
+            Cancelling an approved booking pauses new requests for it until {formatInstant(b.cooldownUntil)} (fair-usage rule).
+          </p>
+        </div>
+      )}
       {overdue && (
         <div className="animate-pop-in rounded-xl border border-rose-200 bg-rose-50 p-4 text-sm text-rose-900">
           <p className="font-semibold">This booking is overdue.</p>
@@ -152,6 +172,16 @@ export default async function BookingDetailPage({ params }: PageProps<"/bookings
           )}
         </section>
       )}
+
+      <section id="history" className="space-y-3">
+        <h2 className="text-lg font-semibold">History</h2>
+        <p className="text-sm text-slate-500">
+          Every step of this booking, visible to the requester, the owner and the managers.
+        </p>
+        <Card>
+          <ActivityTimeline entries={timeline} />
+        </Card>
+      </section>
 
       <div className="flex flex-wrap items-center gap-3">
         <Link
