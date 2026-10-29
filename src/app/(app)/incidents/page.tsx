@@ -2,6 +2,7 @@ import Link from "next/link";
 import { requireUser } from "@/lib/auth";
 import { loadIncidents } from "@/lib/incidents";
 import { formatWindow } from "@/lib/format";
+import { AiSummary } from "@/components/ai-summary";
 import { IncidentCard } from "@/components/incident-card";
 import { ResolveIncidentForm } from "@/components/resolve-incident-form";
 
@@ -63,7 +64,14 @@ export default async function IncidentsPage() {
                         · {i.booking.requester.name} · {formatWindow(i.booking.startsAt, i.booking.endsAt)}
                       </p>
                     }
-                    actions={reviewer && i.status === "OPEN" ? <ResolveIncidentForm incidentId={i.id} /> : undefined}
+                    actions={
+                      reviewer && i.status === "OPEN" ? (
+                        <div className="space-y-3">
+                          <AiSummary incidentId={i.id} />
+                          <ResolveIncidentForm incidentId={i.id} />
+                        </div>
+                      ) : undefined
+                    }
                   />
                 ))}
               </ul>

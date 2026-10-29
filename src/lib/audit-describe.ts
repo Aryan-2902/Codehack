@@ -57,6 +57,14 @@ export function describeAudit(action: string, meta: Meta): AuditView {
       return { label: "Role changed", detail: `${cap(str(m.from) ?? "?")} → ${cap(str(m.to) ?? "?")}`, tone: "warn" };
     case "user.suspended":
       return { label: "Booking privileges suspended", detail: num(m.days) ? `${m.days} day${m.days === 1 ? "" : "s"}` : undefined, tone: "bad" };
+    case "ai.match_suggested":
+      return {
+        label: "Resource suggestions requested",
+        detail: joinDetail(m.mode === "ai" ? "AI" : "basic keyword matching", num(m.count) !== undefined ? `${m.count} suggested` : undefined),
+        tone: "neutral",
+      };
+    case "ai.incident_summarised":
+      return { label: "Incident summary generated", detail: m.mode === "ai" ? "AI (advisory)" : "basic (advisory)", tone: "neutral" };
     case "audit.exported":
       return { label: "Audit log exported", detail: str(m.filter), tone: "info" };
     case "eligibility.granted":
@@ -140,6 +148,8 @@ export const KNOWN_ACTIONS = [
   "user.role_changed",
   "user.suspended",
   "audit.exported",
+  "ai.match_suggested",
+  "ai.incident_summarised",
   "eligibility.granted",
   "eligibility.revoked",
   "resource.created",
@@ -165,4 +175,5 @@ export const AUDIT_GROUPS = [
   ["incident", "Incidents", ["incident."]],
   ["resource", "Listings & approvals", ["resource.", "eligibility."]],
   ["user", "Accounts & security", ["user.", "audit."]],
+  ["ai", "AI suggestions", ["ai."]],
 ] as const;

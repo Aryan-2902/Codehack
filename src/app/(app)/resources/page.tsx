@@ -5,6 +5,7 @@ import { parseSearch, type ResourceSearch } from "@/lib/availability";
 import { searchResources } from "@/lib/search";
 import { ResourceCard } from "@/components/resource-card";
 import { ResourceGridSkeleton } from "@/components/resource-skeleton";
+import { ResourceMatcher } from "@/components/resource-matcher";
 import { SearchFilters } from "@/components/search-filters";
 
 export const metadata = { title: "Resources · Campus Lab Share" };
@@ -32,6 +33,8 @@ export default async function ResourcesPage({ searchParams }: PageProps<"/resour
           </Link>
         )}
       </div>
+
+      <ResourceMatcher />
 
       <SearchFilters initial={search} />
 

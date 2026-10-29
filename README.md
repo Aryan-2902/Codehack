@@ -103,6 +103,26 @@ All accounts use the password `Demo@1234`.
     plus a CSV export (itself audited, and safe to open in a spreadsheet).
 11. **Privacy, security & role-based access**: see the notes below.
 
+12. **AI-assisted suggestions (advisory only)**: two helpers, both labelled "suggestion" and both
+    leaving every decision to a person.
+    - **Resource matching**: on the Resources page, describe your project in a sentence ("I need to
+      print an enclosure for my IoT project") and get up to five resources worth a look, each with a
+      one-line reason and whether you are eligible for it. Nothing is booked; each suggestion links to
+      the normal listing and booking flow.
+    - **Incident summaries**: managers and admins can request a neutral summary of an incident
+      (what was reported, the pick-up and return condition, lateness, what to check before deciding).
+      It never fills in the resolution, recommends a penalty, or changes anything: the manager still
+      writes the outcome and clicks the button.
+    - **Works with or without a model.** With `AI_FEATURES="true"` and an `ANTHROPIC_API_KEY`, Claude
+      (via the official Anthropic SDK, structured JSON output, server-side fallback on) does the work.
+      Without them, or if the AI service is down, refuses, times out or returns something unusable,
+      the app falls back to a built-in keyword matcher and a template summary built only from the
+      recorded facts, and says so ("Basic suggestion"). Nothing is sent to a third party in that mode.
+    - **The model's answer is never trusted.** Suggested resource ids must exist in the catalog the
+      user could actually book (anything else is dropped), text is stripped of markup, summaries are
+      length-limited, and each person has an allowance of 15 AI requests per feature per 10 minutes.
+      Every use is recorded in the audit log (mode and count only, never the text).
+
 ## Privacy, security & fairness notes
 
 **Access control**
@@ -143,6 +163,18 @@ All accounts use the password `Demo@1234`.
   limit) shows the rule behind it. Penalties such as suspensions are always a manager's explicit
   decision, never automatic, and are visible to both parties.
 
+**AI suggestions and your data**
+- Off by default. When enabled, a resource-matching request sends the person's one-sentence need and
+  the public details of resources they could book (name, category, location, description, access
+  requirements). An incident summary sends the incident description, the pick-up and return condition
+  notes, the resource name, the booking time and the lateness, with the people referred to only by
+  role ("the borrower", "the resource owner").
+- Never sent: names, emails, user or booking ids, passwords, or any photos.
+- Free text is stripped of angle brackets so it cannot fake the tags that separate data from
+  instructions, and the system prompts tell the model to ignore instructions found inside the data.
+  The model has no tools and cannot take any action; at worst it suggests a wrong resource, which the
+  eligibility and booking rules still enforce.
+
 **Known limitations**
 - No strict Content-Security-Policy yet (it needs per-request nonces for Next.js inline scripts).
 - JWTs cannot be revoked before they expire (7 days); signing out clears the cookie on that browser.
@@ -154,6 +186,18 @@ All accounts use the password `Demo@1234`.
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
 photo uploads on listings. Without them, uploads return a clear "not configured" error and
 everything else still works.
+
+## AI settings (optional)
+
+| Variable | Purpose |
+| --- | --- |
+| `AI_FEATURES="true"` | Turns on AI mode. Without it the built-in suggestions are used. |
+| `ANTHROPIC_API_KEY` | Your Anthropic API key. Required for AI mode. |
+| `AI_MODEL` | Model to use. Defaults to `claude-opus-5-5`. |
+| `AI_TIMEOUT_MS` | How long to wait for the model before falling back (default 20000). |
+
+If a suggestion shows "Basic suggestion" with a note that the AI service wasn't available, the cause
+is logged on the server as `[ai] ... failed: <reason>` (for example `api`, `refused`, `invalid`).
 
 ## Checks
 
