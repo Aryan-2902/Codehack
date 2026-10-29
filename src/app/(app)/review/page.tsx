@@ -20,8 +20,8 @@ export default async function ReviewPage() {
       rows: items.filter((i) => i.status === "WAITLISTED"),
     },
     {
-      title: "Upcoming approved bookings",
-      empty: "No approved bookings coming up.",
+      title: "Approved and in use",
+      empty: "No approved or in-use bookings.",
       rows: items.filter((i) => i.status === "APPROVED" || i.status === "CHECKED_IN"),
     },
   ];

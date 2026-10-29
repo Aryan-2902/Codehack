@@ -124,6 +124,27 @@ export const decisionSchema = z
     { path: ["reason"], message: "Give a reason (at least 5 characters) so the requester knows why" },
   );
 
-export const bookingCreateSchema =bookingUpdateSchema.extend({
+const photoIds = z.array(z.string().min(1)).max(4, "Attach at most 4 photos").default([]);
+
+// Condition at pick-up / return. Notes and at least one photo are required so the
+// "before" and "after" can actually be compared later.
+export const conditionReportSchema = z.object({
+  condition: z.enum(["GOOD", "MINOR_ISSUES", "DAMAGED"]),
+  notes: z.string().trim().min(3, "Add a short note about the condition").max(1000),
+  photoIds: photoIds.refine((ids) => ids.length >= 1, "Attach at least one photo"),
+});
+
+export const incidentSchema = z.object({
+  type: z.enum(["DAMAGE", "DELAY", "CONFLICT"]),
+  description: z.string().trim().min(10, "Describe what happened (at least 10 characters)").max(1000),
+  photoIds,
+});
+
+export const resolveIncidentSchema = z.object({
+  resolution: z.string().trim().min(10, "Write the resolution (at least 10 characters)").max(1000),
+  suspensionDays: z.number().int().min(0).max(90).default(0),
+});
+
+export const bookingCreateSchema = bookingUpdateSchema.extend({
   resourceId: z.string().min(1),
 });

@@ -75,6 +75,7 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
       userId,
       message: `${user.name} requested ${resource.name}${needsManager(resource) ? " (needs manager approval)" : ""}.`,
       link: "/review",
+      kind: "request" as const,
     })),
   );
 

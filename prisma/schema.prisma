@@ -57,18 +57,27 @@ enum IncidentStatus {
   RESOLVED
 }
 
+enum ConditionRating {
+  GOOD
+  MINOR_ISSUES
+  DAMAGED
+}
+
 model User {
-  id            String   @id @default(cuid())
-  name          String
-  email         String   @unique
-  passwordHash  String
-  role          Role     @default(STUDENT)
-  department    String
+  id               String    @id @default(cuid())
+  name             String
+  email            String    @unique
+  passwordHash     String
+  role             Role      @default(STUDENT)
+  department       String
   // Global verification flags an Owner/Manager/Admin can set ("ID verified", "safety training completed").
-  verified      Boolean  @default(false)
-  safetyTrained Boolean  @default(false)
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  verified         Boolean   @default(false)
+  safetyTrained    Boolean   @default(false)
+  // Set by a manager when resolving an incident; blocks new booking requests until it passes.
+  suspendedUntil   DateTime?
+  suspensionReason String?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   resources         Resource[]
   bookings          BookingRequest[]   @relation("Requester")
@@ -76,7 +85,9 @@ model User {
   eligibilityGrants EligibilityGrant[] @relation("GrantedTo")
   grantsGiven       EligibilityGrant[] @relation("GrantedBy")
   conditionReports  ConditionReport[]
-  incidents         Incident[]
+  incidents         Incident[]         @relation("IncidentReporter")
+  resolvedIncidents Incident[]         @relation("IncidentResolver")
+  uploadedPhotos    ConditionPhoto[]
   auditLogs         AuditLog[]
   waitlistEntries   WaitlistEntry[]
   notifications     Notification[]
@@ -162,19 +173,22 @@ model BlackoutDate {
 }
 
 model BookingRequest {
-  id             String        @id @default(cuid())
-  resourceId     String
-  requesterId    String
-  managerId      String?
-  purpose        String
-  startsAt       DateTime
-  endsAt         DateTime
-  status         BookingStatus @default(DRAFT)
-  decisionReason String?
-  checkedInAt    DateTime?
-  checkedOutAt   DateTime?
-  createdAt      DateTime      @default(now())
-  updatedAt      DateTime      @updatedAt
+  id               String        @id @default(cuid())
+  resourceId       String
+  requesterId      String
+  managerId        String?
+  purpose          String
+  startsAt         DateTime
+  endsAt           DateTime
+  status           BookingStatus @default(DRAFT)
+  decisionReason   String?
+  checkedInAt      DateTime?
+  checkedOutAt     DateTime?
+  // Set once, so an overdue flag / start reminder is only raised a single time.
+  overdueFlaggedAt DateTime?
+  reminderSentAt   DateTime?
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
 
   resource         Resource          @relation(fields: [resourceId], references: [id])
   requester        User              @relation("Requester", fields: [requesterId], references: [id])
@@ -184,16 +198,30 @@ model BookingRequest {
 }
 
 model ConditionReport {
-  id         String      @id @default(cuid())
+  id         String          @id @default(cuid())
   bookingId  String
   stage      ReportStage
+  condition  ConditionRating @default(GOOD)
+  // IDs of ConditionPhoto rows (private, served through a permission-checked route).
   photos     String[]
   notes      String
   reportedBy String
-  createdAt  DateTime    @default(now())
+  createdAt  DateTime        @default(now())
 
   booking  BookingRequest @relation(fields: [bookingId], references: [id])
   reporter User           @relation(fields: [reportedBy], references: [id])
+}
+
+// Private image bytes for condition reports and incidents. Stored in Postgres so access can be
+// checked on every request (only the booking's parties, managers and admins may view them).
+model ConditionPhoto {
+  id         String   @id @default(cuid())
+  uploaderId String
+  mimeType   String
+  data       Bytes
+  createdAt  DateTime @default(now())
+
+  uploader User @relation(fields: [uploaderId], references: [id], onDelete: Cascade)
 }
 
 model Incident {
@@ -201,25 +229,35 @@ model Incident {
   bookingId   String
   type        IncidentType
   description String
+  photos      String[]
   reportedBy  String
-  resolution  String?
   status      IncidentStatus @default(OPEN)
   createdAt   DateTime       @default(now())
 
-  booking  BookingRequest @relation(fields: [bookingId], references: [id])
-  reporter User           @relation(fields: [reportedBy], references: [id])
+  // Filled in by a manager or admin; nothing is ever penalised automatically.
+  resolution     String?
+  resolvedById   String?
+  resolvedAt     DateTime?
+  suspensionDays Int?
+
+  booking    BookingRequest @relation(fields: [bookingId], references: [id])
+  reporter   User           @relation("IncidentReporter", fields: [reportedBy], references: [id])
+  resolvedBy User?          @relation("IncidentResolver", fields: [resolvedById], references: [id])
+
+  @@index([status])
 }
 
 model AuditLog {
   id         String   @id @default(cuid())
-  actorId    String
+  // Null for actions the system takes itself (e.g. flagging an overdue return).
+  actorId    String?
   action     String
   targetType String
   targetId   String
   metadata   Json?
   createdAt  DateTime @default(now())
 
-  actor User @relation(fields: [actorId], references: [id])
+  actor User? @relation(fields: [actorId], references: [id])
 
   @@index([targetType, targetId])
 }
@@ -243,6 +281,7 @@ model Notification {
   userId    String
   message   String
   link      String?
+  kind      String   @default("info")
   read      Boolean  @default(false)
   createdAt DateTime @default(now())
 

@@ -66,7 +66,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
       });
     });
     await audit({ actorId: actor.id, action: "booking.approved", targetType: "BookingRequest", targetId: id, metadata: { reason: decisionReason } });
-    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was approved.`, link }]);
+    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was approved.`, link, kind: "approved" }]);
   } else if (action === "reject") {
     const updated = await db.bookingRequest.updateMany({
       where: { id, status: { in: ["PENDING", "WAITLISTED"] } },
@@ -74,7 +74,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
     });
     if (updated.count === 0) throw new ApiError(409, "This request has already been decided");
     await audit({ actorId: actor.id, action: "booking.rejected", targetType: "BookingRequest", targetId: id, metadata: { reason } });
-    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was rejected: ${reason}`, link }]);
+    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was rejected: ${reason}`, link, kind: "rejected" }]);
   } else if (action === "waitlist") {
     if (booking.status !== "PENDING") {
       throw new ApiError(409, "Only pending requests can be waitlisted");
@@ -93,7 +93,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
     });
     if (updated.count === 0) throw new ApiError(409, "This request has already been decided");
     await audit({ actorId: actor.id, action: "booking.waitlisted", targetType: "BookingRequest", targetId: id, metadata: { position, rule: "slot already booked; first come, first served" } });
-    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was waitlisted (#${position}). You'll be notified if a slot opens up.`, link }]);
+    await notify([{ userId: booking.requesterId, message: `Your request for ${name} was waitlisted (#${position}). You'll be notified if a slot opens up.`, link, kind: "waitlisted" }]);
   } else {
     // cancel: a reviewer withdraws an approved booking, which frees the slot for the waitlist
     const updated = await db.bookingRequest.updateMany({
@@ -102,7 +102,7 @@ export const POST = handle(async (req: Request, { params }: Ctx) => {
     });
     if (updated.count === 0) throw new ApiError(409, "Only approved bookings can be cancelled");
     await audit({ actorId: actor.id, action: "booking.cancelled", targetType: "BookingRequest", targetId: id, metadata: { by: "reviewer", reason } });
-    await notify([{ userId: booking.requesterId, message: `Your approved booking for ${name} was cancelled: ${reason}`, link }]);
+    await notify([{ userId: booking.requesterId, message: `Your approved booking for ${name} was cancelled: ${reason}`, link, kind: "cancelled" }]);
     await promoteWaitlist(booking.resourceId, booking, actor.id);
   }
 

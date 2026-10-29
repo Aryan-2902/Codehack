@@ -147,6 +147,43 @@ body {
   animation: draw 0.6s ease-out forwards;
 }
 
+@keyframes fill-bar {
+  from {
+    width: 0;
+  }
+}
+
+/* A progress bar that grows to its --w width when it first appears. */
+.animate-fill {
+  width: var(--w, 0%);
+  animation: fill-bar 0.9s cubic-bezier(0.22, 1, 0.36, 1) 0.15s both;
+}
+
+@keyframes ring {
+  0%,
+  100% {
+    transform: rotate(0);
+  }
+  15% {
+    transform: rotate(14deg);
+  }
+  30% {
+    transform: rotate(-12deg);
+  }
+  45% {
+    transform: rotate(8deg);
+  }
+  60% {
+    transform: rotate(-5deg);
+  }
+}
+
+/* The notification bell wiggles when something new arrives. */
+.animate-ring {
+  transform-origin: 50% 10%;
+  animation: ring 0.9s ease-in-out;
+}
+
 .animate-bob {
   animation: bob 3.2s ease-in-out infinite;
 }

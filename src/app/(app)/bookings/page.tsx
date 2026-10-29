@@ -2,6 +2,7 @@ import Link from "next/link";
 import { db } from "@/lib/db";
 import { requireUser } from "@/lib/auth";
 import { waitlistPosition } from "@/lib/approvals";
+import { isOverdue } from "@/lib/checkin-rules";
 import { formatWindow } from "@/lib/format";
 import { BookingActions } from "@/components/booking-actions";
 import { BookingStatusBadge } from "@/components/booking-status";
@@ -77,6 +78,11 @@ export default async function BookingsPage() {
                           {b.resource.name}
                         </Link>
                         <BookingStatusBadge status={b.status} />
+                        {isOverdue(b, new Date()) && (
+                          <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
+                            Overdue
+                          </span>
+                        )}
                         {positions.has(b.id) && (
                           <span className="rounded-full bg-violet-100 px-2 py-0.5 text-xs font-medium text-violet-800">
                             #{positions.get(b.id)} in line

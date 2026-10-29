@@ -90,6 +90,16 @@ export async function loadOwnBooking(user: CurrentUser, id: string) {
   return booking;
 }
 
+/** A booking the user is a party to (requester, owner, manager, admin), or 404. */
+export async function loadPartyBooking(user: CurrentUser, id: string) {
+  const booking = await db.bookingRequest.findUnique({
+    where: { id },
+    include: { resource: { select: { id: true, name: true, ownerId: true } } },
+  });
+  if (!booking || !canViewBooking(user, booking)) throw new ApiError(404, "Booking not found");
+  return booking;
+}
+
 /** Requester, the resource's owner, managers and admins may view a booking. */
 export function canViewBooking(
   user: CurrentUser,

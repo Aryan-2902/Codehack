@@ -78,6 +78,11 @@ export function ReviewCard({ item, index }: { item: ReviewItem; index: number })
                     Waitlist #{item.position}
                   </span>
                 )}
+                {item.overdue && (
+                  <span className="rounded-full bg-rose-100 px-2 py-0.5 text-xs font-medium text-rose-800">
+                    Overdue
+                  </span>
+                )}
                 {item.needsManager && (
                   <span className="rounded-full bg-amber-100 px-2 py-0.5 text-xs font-medium text-amber-800">
                     Needs manager
@@ -139,7 +144,14 @@ export function ReviewCard({ item, index }: { item: ReviewItem; index: number })
             <p className="text-sm text-amber-800">This request&apos;s start time has already passed.</p>
           )}
 
-          {!item.canDecide ? (
+          {item.status === "CHECKED_IN" ? (
+            <Link
+              href={`/bookings/${item.id}`}
+              className="inline-block rounded-md border border-slate-300 px-3 py-1.5 text-sm font-medium transition hover:bg-slate-100"
+            >
+              Open booking
+            </Link>
+          ) : !item.canDecide ? (
             <p className="rounded-md bg-slate-100 px-3 py-2 text-sm text-slate-600">
               This resource needs manager approval, so a manager will decide on this request.
             </p>

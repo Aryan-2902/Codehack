@@ -5,8 +5,6 @@ import { canDecide, needsManager, overlaps } from "@/lib/approval-rules";
 import { checkEligibility } from "@/lib/eligibility";
 import { HOLDING_STATUSES, waitlistPosition } from "@/lib/approvals";
 
-const QUEUE_STATUSES = ["PENDING", "WAITLISTED", "APPROVED", "CHECKED_IN"] as const;
-
 /**
  * Requests a reviewer can act on, each with the competing requests for the same slot,
  * the requester's eligibility, and (for the waitlist) their place in line.
@@ -16,8 +14,11 @@ export async function loadReviewQueue(user: CurrentUser) {
   const now = new Date();
   const bookings = await db.bookingRequest.findMany({
     where: {
-      status: { in: [...QUEUE_STATUSES] },
-      endsAt: { gt: now },
+      // In-use bookings stay visible after their window ends, so an overdue return can't hide.
+      OR: [
+        { status: { in: ["PENDING", "WAITLISTED", "APPROVED"] }, endsAt: { gt: now } },
+        { status: "CHECKED_IN" },
+      ],
       resource: user.role === "OWNER" ? { ownerId: user.id } : {},
     },
     include: {
@@ -63,6 +64,7 @@ export async function loadReviewQueue(user: CurrentUser) {
         needsManager: needsManager(b.resource),
         position: b.status === "WAITLISTED" ? await waitlistPosition(b) : null,
         started: b.startsAt <= now,
+        overdue: b.status === "CHECKED_IN" && b.endsAt < now,
         conflicts: others.map((o) => ({
           id: o.id,
           status: o.status,

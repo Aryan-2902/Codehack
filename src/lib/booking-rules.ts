@@ -2,6 +2,7 @@
 // evaluateBooking returns every check that applies, passed or failed, plus non-blocking warnings.
 import {
   DAY_NAMES,
+  formatDate,
   formatLocalDate,
   localToInstant,
   minuteToTime,
@@ -53,7 +54,12 @@ function hoursOn(slots: BookingResource["slots"], date: string) {
 }
 
 export function evaluateBooking(args: {
-  user: EligibilityUser & { id: string };
+  user: EligibilityUser & {
+    id: string;
+    /** Set by a manager when resolving an incident. */
+    suspendedUntil?: Date | null;
+    suspensionReason?: string | null;
+  };
   resource: BookingResource;
   hasGrant: boolean;
   window: BookingWindow;
@@ -76,6 +82,16 @@ export function evaluateBooking(args: {
         ? "This resource is under maintenance"
         : "This resource is no longer available",
   });
+  if (user.suspendedUntil && user.suspendedUntil > now) {
+    checks.push({
+      key: "standing",
+      label: "Account in good standing",
+      ok: false,
+      message: `Your booking privileges are suspended until ${formatDate(user.suspendedUntil)}${
+        user.suspensionReason ? ` (${user.suspensionReason})` : ""
+      }`,
+    });
+  }
   if (resource.ownerId === user.id) {
     checks.push({
       key: "owner",

@@ -14,6 +14,8 @@ const publicUserSelect = {
   department: true,
   verified: true,
   safetyTrained: true,
+  suspendedUntil: true,
+  suspensionReason: true,
 } as const;
 
 export type CurrentUser = {
@@ -24,6 +26,8 @@ export type CurrentUser = {
   department: string;
   verified: boolean;
   safetyTrained: boolean;
+  suspendedUntil: Date | null;
+  suspensionReason: string | null;
 };
 
 export { publicUserSelect };

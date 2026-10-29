@@ -42,6 +42,7 @@ export const POST = handle(async (_req: Request, { params }: Ctx) => {
         userId: resource.ownerId,
         message: `${user.name} cancelled their approved booking for ${resource.name}.`,
         link: "/review",
+        kind: "cancelled",
       },
     ]);
     await promoteWaitlist(booking.resourceId, booking, user.id);

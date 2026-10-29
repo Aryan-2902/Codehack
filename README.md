@@ -67,8 +67,39 @@ All accounts use the password `Demo@1234`.
    the audit log. Notifications are queued for requesters and reviewers; the in-app feed to read
    them comes with the notifications feature.
 
+6. **Check-in / check-out & condition reporting**: from an approved booking, the requester or the
+   owner records the condition at pick-up (condition rating, notes and at least one photo), then
+   again at return. Check-in opens 15 minutes before the start. The booking page shows the
+   "before" and "after" side by side and flags when the condition got worse, and shows how late a
+   return was. Condition photos are **private**: they are stored in Postgres and only served
+   through a permission-checked route, so only the booking's two parties, managers and admins can
+   see them. Overdue returns (in use past the booked end) are flagged automatically and the
+   requester, owner and managers are notified.
+7. **Incidents, damage & disputes**: either party can report damage, a delay or a scheduling
+   conflict (with optional photos) on an approved booking. Reports go to a manager/admin queue
+   at **Incidents**. A manager writes the resolution and may choose a booking suspension; that is
+   always a human decision, and nothing is penalised automatically. The outcome is visible to both
+   parties, recorded in the audit log, and a suspension blocks new booking requests (with the
+   reason shown) until it ends.
+8. **Notifications**: a bell in the nav polls for new notifications and marks them read as you open
+   them; the full history is at **Notifications**. It covers new requests, approvals, rejections,
+   waitlisting and promotion, cancellations, check-in/out, overdue returns, start reminders
+   (one hour before) and incidents.
+
 ## Photo uploads (optional)
 
 Set `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY` and `CLOUDINARY_API_SECRET` in `.env` to enable
 photo uploads on listings. Without them, uploads return a clear "not configured" error and
 everything else still works.
+
+## Demo setting
+
+Check-in normally opens 15 minutes before a booking starts. For a live demo, set `DEMO_MODE="true"`
+in `.env` to let an approved booking be checked in at any time before its window ends, so you don't
+have to wait for a slot to begin. Leave it unset in normal use.
+
+## Scheduled events
+
+There is no background worker. Overdue flags and start reminders are raised lazily: whenever a
+signed-in page loads (and when the notification bell polls), anything that has become due is
+flagged exactly once.

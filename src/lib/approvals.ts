@@ -88,6 +88,7 @@ export async function promoteWaitlist(
       userId: b.requesterId,
       message: `A slot opened up: your request for ${resource?.name ?? "the resource"} was approved from the waitlist.`,
       link: `/bookings/${b.id}`,
+      kind: "promoted" as const,
     })),
   );
   return promoted;
